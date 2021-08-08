@@ -1,0 +1,182 @@
+import os
+import random
+import typing as t
+
+from google.cloud import translate_v2 as translate
+
+import discord
+from dotenv import load_dotenv
+
+__version__ = "0.1.0"
+DEFAULT_FUCKERY = 8
+MAX_FUCKERY = 12
+MAX_CHARS = 1500
+BOT_PREFIX = "$translate"
+COMMAND_PREFIX = "-"
+TRANSLATION_QUOTA = 500000
+LOG_FILE = "chars_log.txt"
+LANGUAGES = [
+    "ar",
+    "zh",
+    "fr",
+    "de",
+    "hi",
+    "id",
+    "ga",
+    "it",
+    "ja",
+    "ko",
+    "pl",
+    "pt",
+    "ru",
+    "es",
+    "tr",
+    "uk",
+    "vi",
+]
+
+load_dotenv()
+discord_token = os.environ.get("DISCORD_TOKEN")
+
+discord_client = discord.Client()
+translate_client = translate.Client()
+
+
+@discord_client.event
+async def on_ready():
+    print(f"Logged in as {discord_client.user}")
+
+
+@discord_client.event
+async def on_message(message):
+    if message.author == discord_client.user:
+        return
+
+    if message.content.startswith(BOT_PREFIX):
+        content: t.List[str] = message.content.split(" ", 1)
+        if len(content) == 1 and content[0] == "$translate":
+            await help_text(message.channel)
+            return
+        text = content[1]
+        fuckery = DEFAULT_FUCKERY
+        if text.startswith(COMMAND_PREFIX):
+            command = text[1:]
+            if command == "help":
+                await help_text(message.channel)
+                return
+            if command.startswith("fuckery"):
+                subcommand = command.split(" ", 2)
+                if len(subcommand) <= 2:
+                    print("No subcommand provided")
+                    await invalid_fuckery(message.channel)
+                    return
+                try:
+                    fuckery = int(subcommand[1])
+                    if 0 <= fuckery < MAX_FUCKERY:
+                        raise ValueError("Fuckery not in valid range")
+                except ValueError:
+                    await invalid_fuckery(message.channel)
+                    return
+                text = subcommand[2]
+            else:
+                await help_text(message.channel)
+                return
+        if len(text) > MAX_CHARS:
+            await text_too_long(message.channel)
+            return
+        if read_translation_chars() + len(text) * (fuckery + 1) >= TRANSLATION_QUOTA:
+            await rate_limit(message.channel)
+            return
+        input_language = "en"
+        for i in range(1, fuckery + 1):
+            if i % 3 == 0 and i < fuckery:
+                print(f"Translating from {output_language} to en")
+                text = await translate_text(
+                    message.channel, text, output_language, "en"
+                )
+                input_language = "en"
+            while True:
+                output_language = LANGUAGES[random.randint(0, len(LANGUAGES) - 1)]
+                if output_language != input_language:
+                    break
+            print(f"Translating from {input_language} to {output_language}")
+            text = await translate_text(
+                message.channel, text, input_language, output_language
+            )
+            input_language = output_language
+        print(f"Translating from {input_language} to en")
+        text = await translate_text(message.channel, text, input_language, "en")
+        await message.channel.send(text)
+
+
+async def help_text(channel) -> None:
+    text = f'Type "{BOT_PREFIX} [TEXT]" to badly translate text.\n'
+    text += "To set the amount of translation fuckery, type "
+    text += f'"{BOT_PREFIX} {COMMAND_PREFIX}fuckery # [TEXT]", '
+    text += f"where # is the amount of fuckery you desire (Max value: {MAX_FUCKERY}). "
+    text += f"The default amount of fuckery is {DEFAULT_FUCKERY}."
+    await channel.send(text)
+
+
+async def invalid_fuckery(channel) -> None:
+    text = "That's not how you're supposed to do it, idiot.\n"
+    text += (
+        f'Type "{BOT_PREFIX} {COMMAND_PREFIX}fuckery # [TEXT]", where # is the amount '
+    )
+    text += f"of fuckery you desire (Max value: {MAX_FUCKERY}). "
+    text += f"The default amount of fuckery is {DEFAULT_FUCKERY}"
+    await channel.send(text)
+
+
+async def text_too_long(channel) -> None:
+    text = f"Your text is too long to translate. Max: {MAX_CHARS} characters"
+    await channel.send(text)
+
+
+async def rate_limit(channel) -> None:
+    text = "Unfortunately, I can't translate any more without costing my creator money."
+    await channel.send(text)
+
+
+def create_chars_log() -> None:
+    if not os.path.exists(LOG_FILE):
+        with open(LOG_FILE, "w") as chars_log:
+            chars_log.write("0")
+
+
+def add_translation_chars(num_chars: int) -> None:
+    with open(LOG_FILE, "r+") as chars_log:
+        num_translation_chars = int(chars_log.read()) + num_chars
+        chars_log.seek(0)
+        chars_log.write(str(num_translation_chars))
+        chars_log.truncate()
+
+
+def read_translation_chars() -> int:
+    with open(LOG_FILE, "r") as chars_log:
+        num_translation_chars = int(chars_log.read())
+    return num_translation_chars
+
+
+async def translate_text(channel, text: str, input_language: str, output_language: str):
+    translation_result: dict = translate_client.translate(
+        text,
+        format_="text",
+        source_language=input_language,
+        target_language=output_language,
+    )
+    translation = translation_result.get("translatedText")
+    if not translation:
+        text = (
+            "Uwu I made a fucky wucky!! A wittle fucko boingo!"
+            " I couldn't twanswate yow text :-("
+        )
+        await channel.send(text)
+        raise RuntimeError("Couldn't translate text")
+    add_translation_chars(len(text))
+    return translation
+
+
+if __name__ == "__main__":
+    create_chars_log()
+    discord_client.run(discord_token)
