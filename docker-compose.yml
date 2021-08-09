@@ -1,0 +1,9 @@
+version: "3"
+services:
+  bot:
+    image: "discord-bot:latest"
+    build:
+      context: .
+    restart: "always"
+    volumes:
+      - ./chars_log.txt:/usr/src/app/chars_log.txt

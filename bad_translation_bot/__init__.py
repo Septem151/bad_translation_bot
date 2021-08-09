@@ -9,11 +9,11 @@ from dotenv import load_dotenv
 
 __version__ = "0.1.0"
 DEFAULT_FUCKERY = 8
-MAX_FUCKERY = 12
+MAX_FUCKERY = 16
 MAX_CHARS = 1500
 BOT_PREFIX = "$translate"
 COMMAND_PREFIX = "-"
-TRANSLATION_QUOTA = 500000
+TRANSLATION_QUOTA = 480000
 LOG_FILE = "chars_log.txt"
 LANGUAGES = [
     "ar",
@@ -82,14 +82,14 @@ async def on_message(message):
                 await help_text(message.channel)
                 return
         if len(text) > MAX_CHARS:
-            await text_too_long(message.channel)
+            await text_too_long(message.channel, len(text))
             return
         if read_translation_chars() + len(text) * (fuckery + 1) >= TRANSLATION_QUOTA:
             await rate_limit(message.channel)
             return
         input_language = "en"
         for i in range(1, fuckery + 1):
-            if i % 3 == 0 and i < fuckery:
+            if i % 3 == 0 and i <= fuckery:
                 print(f"Translating from {output_language} to en")
                 text = await translate_text(
                     message.channel, text, output_language, "en"
@@ -119,7 +119,10 @@ async def help_text(channel) -> None:
 
 
 async def invalid_fuckery(channel) -> None:
-    text = "That's not how you're supposed to do it, idiot.\n"
+    text = (
+        "Uwu you made a fucky wucky!! A wittle fucko boingo!"
+        " Fuckery isn't used like dat :-(\n"
+    )
     text += (
         f'Type "{BOT_PREFIX} {COMMAND_PREFIX}fuckery # [TEXT]", where # is the amount '
     )
@@ -128,13 +131,21 @@ async def invalid_fuckery(channel) -> None:
     await channel.send(text)
 
 
-async def text_too_long(channel) -> None:
-    text = f"Your text is too long to translate. Max: {MAX_CHARS} characters"
+async def text_too_long(channel, text_length: int) -> None:
+    text = (
+        "Uwu you made a fucky wucky!! A wittle fucko boingo!"
+        " I couldn't twanswate yow text :-(\n"
+    )
+    text += f"Character limit exceeded: {text_length}/{MAX_CHARS}"
     await channel.send(text)
 
 
 async def rate_limit(channel) -> None:
-    text = "Unfortunately, I can't translate any more without costing my creator money."
+    text = (
+        "Uwu you made a fucky wucky!! A wittle fucko boingo!"
+        " I couldn't twanswate yow text :-(\n"
+    )
+    text += "You used me too much! I don't wanna cost my creator money."
     await channel.send(text)
 
 

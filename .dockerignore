@@ -10,3 +10,4 @@ mypy.ini
 README.rst
 tests
 poetry.toml
+chars_log.txt
