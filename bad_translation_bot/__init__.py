@@ -2,10 +2,9 @@ import os
 import random
 import typing as t
 
-from google.cloud import translate_v2 as translate
-
 import discord
 from dotenv import load_dotenv
+from google.cloud import translate_v2 as translate
 
 __version__ = "0.1.0"
 DEFAULT_FUCKERY = 8
@@ -72,14 +71,14 @@ async def on_message(message):
                     return
                 try:
                     fuckery = int(subcommand[1])
-                    if 0 <= fuckery < MAX_FUCKERY:
+                    if not 0 <= fuckery <= MAX_FUCKERY:
                         raise ValueError("Fuckery not in valid range")
                 except ValueError:
                     await invalid_fuckery(message.channel)
                     return
                 text = subcommand[2]
             else:
-                await help_text(message.channel)
+                await help_text(message.channel, messed_up=True)
                 return
         if len(text) > MAX_CHARS:
             await text_too_long(message.channel, len(text))
@@ -89,12 +88,12 @@ async def on_message(message):
             return
         input_language = "en"
         for i in range(1, fuckery + 1):
-            if i % 3 == 0 and i <= fuckery:
-                print(f"Translating from {output_language} to en")
-                text = await translate_text(
-                    message.channel, text, output_language, "en"
-                )
-                input_language = "en"
+            # if i % 3 == 0 and i <= fuckery:
+            #     print(f"Translating from {output_language} to en")
+            #     text = await translate_text(
+            #         message.channel, text, output_language, "en"
+            #     )
+            #     input_language = "en"
             while True:
                 output_language = LANGUAGES[random.randint(0, len(LANGUAGES) - 1)]
                 if output_language != input_language:
@@ -109,8 +108,14 @@ async def on_message(message):
         await message.channel.send(text)
 
 
-async def help_text(channel) -> None:
-    text = f'Type "{BOT_PREFIX} [TEXT]" to badly translate text.\n'
+async def help_text(channel, messed_up: bool = False) -> None:
+    text = ""
+    if messed_up:
+        text += (
+            "Uwu you made a fucky wucky!! A wittle fucko boingo!"
+            " Dat's not how I work!\n"
+        )
+    text += f'Type "{BOT_PREFIX} [TEXT]" to badly translate text.\n'
     text += "To set the amount of translation fuckery, type "
     text += f'"{BOT_PREFIX} {COMMAND_PREFIX}fuckery # [TEXT]", '
     text += f"where # is the amount of fuckery you desire (Max value: {MAX_FUCKERY}). "

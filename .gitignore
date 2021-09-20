@@ -156,3 +156,5 @@ key_file.json
 # End of https://www.toptal.com/developers/gitignore/api/python
 
 chars_log.txt
+
+.vscode
