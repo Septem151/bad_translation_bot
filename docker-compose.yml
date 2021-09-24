@@ -7,3 +7,4 @@ services:
     restart: "always"
     volumes:
       - ./chars_log.txt:/usr/src/app/chars_log.txt
+      - ./bad_translation_bot:/usr/src/app/bad_translation_bot

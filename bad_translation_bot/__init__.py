@@ -7,31 +7,120 @@ from dotenv import load_dotenv
 from google.cloud import translate_v2 as translate
 
 __version__ = "0.1.0"
-DEFAULT_FUCKERY = 8
-MAX_FUCKERY = 16
+DEFAULT_FUCKERY = 16
+MAX_FUCKERY = 32
 MAX_CHARS = 1500
 BOT_PREFIX = "$translate"
 COMMAND_PREFIX = "-"
 TRANSLATION_QUOTA = 480000
 LOG_FILE = "chars_log.txt"
 LANGUAGES = [
+    "af",
+    "am",
     "ar",
+    "hy",
+    "az",
+    "eu",
+    "be",
+    "bn",
+    "bs",
+    "bg",
+    "ca",
+    "ceb",
     "zh",
+    "zh-TW",
+    "co",
+    "hr",
+    "cs",
+    "da",
+    "nl",
+    "eo",
+    "et",
+    "fi",
     "fr",
+    "fy",
+    "gl",
+    "ka",
     "de",
+    "el",
+    "gu",
+    "ht",
+    "ha",
+    "haw",
+    "he",
     "hi",
+    "hmn",
+    "hu",
+    "is",
+    "ig",
     "id",
     "ga",
     "it",
     "ja",
+    "jv",
+    "kn",
+    "kk",
+    "km",
+    "rw",
     "ko",
+    "ku",
+    "ky",
+    "lo",
+    "lv",
+    "lt",
+    "lb",
+    "mk",
+    "mg",
+    "ms",
+    "ml",
+    "mt",
+    "mi",
+    "mr",
+    "mn",
+    "my",
+    "ne",
+    "no",
+    "ny",
+    "or",
+    "ps",
+    "fa",
     "pl",
     "pt",
+    "pa",
+    "ro",
     "ru",
+    "sm",
+    "gd",
+    "sr",
+    "st",
+    "sn",
+    "sd",
+    "si",
+    "sk",
+    "sl",
+    "so",
     "es",
+    "su",
+    "sw",
+    "sv",
+    "tl",
+    "tg",
+    "ta",
+    "tt",
+    "te",
+    "th",
     "tr",
+    "tk",
     "uk",
+    "ur",
+    "ug",
+    "uz",
     "vi",
+    "cy",
+    "xh",
+    "yi",
+    "yo",
+    "zu",
 ]
 
 load_dotenv()
@@ -88,12 +177,12 @@ async def on_message(message):
             return
         input_language = "en"
         for i in range(1, fuckery + 1):
-            # if i % 3 == 0 and i <= fuckery:
-            #     print(f"Translating from {output_language} to en")
-            #     text = await translate_text(
-            #         message.channel, text, output_language, "en"
-            #     )
-            #     input_language = "en"
+            if i % 6 == 0 and i <= fuckery:
+                print(f"Translating from {output_language} to en")
+                text = await translate_text(
+                    message.channel, text, output_language, "en"
+                )
+                input_language = "en"
             while True:
                 output_language = LANGUAGES[random.randint(0, len(LANGUAGES) - 1)]
                 if output_language != input_language:
