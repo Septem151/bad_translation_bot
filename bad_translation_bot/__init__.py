@@ -3,6 +3,7 @@ import random
 import typing as t
 
 import discord
+import validators
 from dotenv import load_dotenv
 from google.cloud import translate_v2 as translate
 
@@ -135,11 +136,59 @@ async def on_ready():
     print(f"Logged in as {discord_client.user}")
 
 
+def is_sticker(message: discord.Message) -> bool:
+    print(message)
+    print(dir(message))
+    print(message.attachments)
+    if len(message.stickers) > 0:
+        print("message was a sticker")
+        return True
+    return False
+
+
+def is_attachment(message: discord.Message) -> bool:
+    if len(message.attachments) > 0:
+        print("message was an attachment")
+        return True
+    return False
+
+
+def is_url(message: discord.Message) -> bool:
+    content: str = message.content
+    if validators.url(content, public=True):
+        print("message was a URL")
+        return True
+    return False
+
+
+async def on_cape_message(message: discord.Message):
+    if "cape" not in [role.name for role in message.author.roles]:
+        return await message.delete()
+    if is_sticker(message) or is_url(message):
+        return
+    if is_attachment(message) and message.content in ("cape", ""):
+        return
+    if message.content != "cape":
+        print("message did not equal cape")
+        return await message.delete()
+
+
 @discord_client.event
-async def on_message(message):
+async def on_message_edit(before: discord.Message, after: discord.Message):
+    if before.author == discord_client.user:
+        return
+    channel: discord.TextChannel = before.channel
+    if channel.name == "cape":
+        return await on_cape_message(after)
+
+
+@discord_client.event
+async def on_message(message: discord.Message):
     if message.author == discord_client.user:
         return
-
+    channel: discord.TextChannel = message.channel
+    if channel.name == "cape":
+        return await on_cape_message(message)
     if message.content.startswith(BOT_PREFIX):
         content: t.List[str] = message.content.split(" ", 1)
         if len(content) == 1 and content[0] == "$translate":
@@ -176,6 +225,7 @@ async def on_message(message):
             await rate_limit(message.channel)
             return
         input_language = "en"
+        output_language = "en"
         for i in range(1, fuckery + 1):
             if i % 6 == 0 and i <= fuckery:
                 print(f"Translating from {output_language} to en")

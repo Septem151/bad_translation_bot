@@ -2,6 +2,8 @@ version: "3"
 services:
   bot:
     image: "discord-bot:latest"
+    environment:
+      PYTHONUNBUFFERED: 1
     build:
       context: .
     restart: "always"
