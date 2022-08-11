@@ -1,8 +1,10 @@
 import os
 import random
+import re
 import typing as t
 
 import discord
+import emoji
 import validators
 from dotenv import load_dotenv
 from google.cloud import translate_v2 as translate
@@ -126,9 +128,14 @@ LANGUAGES = [
 
 load_dotenv()
 discord_token = os.environ.get("DISCORD_TOKEN")
-
-discord_client = discord.Client()
+intents = discord.Intents.default()
+intents.messages = True  # pylint: disable=assigning-non-slot
+intents.message_content = True  # pylint: disable=assigning-non-slot
+discord_client = discord.Client(intents=intents)
 translate_client = translate.Client()
+
+emoji_regex = re.compile(r"<:\w*:\d*>")
+spaces_regex = re.compile(r"\s+")
 
 
 @discord_client.event
@@ -137,39 +144,38 @@ async def on_ready():
 
 
 def is_sticker(message: discord.Message) -> bool:
-    print(message)
-    print(dir(message))
-    print(message.attachments)
-    if len(message.stickers) > 0:
-        print("message was a sticker")
-        return True
-    return False
-
-
-def is_attachment(message: discord.Message) -> bool:
-    if len(message.attachments) > 0:
-        print("message was an attachment")
-        return True
-    return False
-
+    return len(message.stickers) > 0
 
 def is_url(message: discord.Message) -> bool:
-    content: str = message.content
-    if validators.url(content, public=True):
-        print("message was a URL")
-        return True
-    return False
+    validation = validators.url(message.content, public=True)
+    return isinstance(validation, bool)
+
+def is_attachment(message: discord.Message) -> bool:
+    return len(message.attachments) > 0
+
+def is_emoji(message: discord.Message) -> bool:
+    return emoji.is_emoji(message.content)
+
+
+def sub_all_emojis(message: discord.Message) -> str:
+    content_sub_custom_emojis = emoji_regex.sub("", message.content)
+    content_sub_all_emojis = [char for char in content_sub_custom_emojis if not emoji.is_emoji(char)]
+    content = "".join(content_sub_all_emojis)
+    content = spaces_regex.sub("", content)
+    return content
 
 
 async def on_cape_message(message: discord.Message):
-    if "cape" not in [role.name for role in message.author.roles]:
+    if "cape" not in [role.name for role in message.author.roles]:  #type:ignore
         return await message.delete()
     if is_sticker(message) or is_url(message):
         return
-    if is_attachment(message) and message.content in ("cape", ""):
+    if is_attachment(message) and message.content in ("", "cape"):
         return
-    if message.content != "cape":
-        print("message did not equal cape")
+    if is_emoji(message):
+        return
+    content = sub_all_emojis(message)
+    if content not in ("", "cape"):
         return await message.delete()
 
 
@@ -177,8 +183,7 @@ async def on_cape_message(message: discord.Message):
 async def on_message_edit(before: discord.Message, after: discord.Message):
     if before.author == discord_client.user:
         return
-    channel: discord.TextChannel = before.channel
-    if channel.name == "cape":
+    if before.channel.name == "cape":  # type: ignore
         return await on_cape_message(after)
 
 
@@ -186,8 +191,7 @@ async def on_message_edit(before: discord.Message, after: discord.Message):
 async def on_message(message: discord.Message):
     if message.author == discord_client.user:
         return
-    channel: discord.TextChannel = message.channel
-    if channel.name == "cape":
+    if message.channel.name == "cape":  # type: ignore
         return await on_cape_message(message)
     if message.content.startswith(BOT_PREFIX):
         content: t.List[str] = message.content.split(" ", 1)
@@ -295,12 +299,12 @@ async def rate_limit(channel) -> None:
 
 def create_chars_log() -> None:
     if not os.path.exists(LOG_FILE):
-        with open(LOG_FILE, "w") as chars_log:
+        with open(LOG_FILE, "w", encoding="UTF-8") as chars_log:
             chars_log.write("0")
 
 
 def add_translation_chars(num_chars: int) -> None:
-    with open(LOG_FILE, "r+") as chars_log:
+    with open(LOG_FILE, "r+", encoding="UTF-8") as chars_log:
         num_translation_chars = int(chars_log.read()) + num_chars
         chars_log.seek(0)
         chars_log.write(str(num_translation_chars))
@@ -308,7 +312,7 @@ def add_translation_chars(num_chars: int) -> None:
 
 
 def read_translation_chars() -> int:
-    with open(LOG_FILE, "r") as chars_log:
+    with open(LOG_FILE, "r", encoding="UTF-8") as chars_log:
         num_translation_chars = int(chars_log.read())
     return num_translation_chars
 
