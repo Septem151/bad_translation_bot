@@ -1,3 +1,5 @@
+import datetime
+import json
 import os
 import random
 import re
@@ -17,6 +19,7 @@ BOT_PREFIX = "$translate"
 COMMAND_PREFIX = "-"
 TRANSLATION_QUOTA = 480000
 LOG_FILE = "chars_log.txt"
+COOLDOWN = 10
 LANGUAGES = [
     "af",
     "am",
@@ -125,6 +128,8 @@ LANGUAGES = [
     "yo",
     "zu",
 ]
+with open("copypastas.json", "r", encoding="UTF-8") as copypastas_file:
+    COPYPASTAS: list[str] = json.load(copypastas_file)["copypastas"]
 
 load_dotenv()
 discord_token = os.environ.get("DISCORD_TOKEN")
@@ -134,8 +139,12 @@ intents.message_content = True  # pylint: disable=assigning-non-slot
 discord_client = discord.Client(intents=intents)
 translate_client = translate.Client()
 
-emoji_regex = re.compile(r"<:\w*:\d*>")
+emoji_regex = re.compile(r"<a?:\w*:\d*>")
 spaces_regex = re.compile(r"\s+")
+mention_regex = re.compile(r"(<@&?\d+>|@everyone|@here)")
+cape_regex = re.compile(r"\bcape\b", flags=re.IGNORECASE)
+
+LAST_TIMESTAMPS: dict[int, datetime.datetime] = {}
 
 
 @discord_client.event
@@ -143,26 +152,45 @@ async def on_ready():
     print(f"Logged in as {discord_client.user}")
 
 
+def is_past_cooldown(guild_id: int) -> bool:
+    last_timestamp = LAST_TIMESTAMPS.get(guild_id, datetime.datetime.utcfromtimestamp(0))
+    cur_time = datetime.datetime.utcnow()
+    time_diff = (datetime.datetime.utcnow() - last_timestamp).total_seconds()
+    if time_diff < COOLDOWN:
+        return False
+    LAST_TIMESTAMPS[guild_id] = cur_time
+    return True
+
+
 def is_sticker(message: discord.Message) -> bool:
     return len(message.stickers) > 0
+
 
 def is_url(message: discord.Message) -> bool:
     validation = validators.url(message.content, public=True)
     return isinstance(validation, bool)
 
+
 def is_attachment(message: discord.Message) -> bool:
     return len(message.attachments) > 0
+
 
 def is_emoji(message: discord.Message) -> bool:
     return emoji.is_emoji(message.content)
 
 
-def sub_all_emojis(message: discord.Message) -> str:
-    content_sub_custom_emojis = emoji_regex.sub("", message.content)
+def sub_all_emojis(content: str) -> str:
+    content_sub_custom_emojis = emoji_regex.sub("", content)
     content_sub_all_emojis = [char for char in content_sub_custom_emojis if not emoji.is_emoji(char)]
     content = "".join(content_sub_all_emojis)
     content = spaces_regex.sub("", content)
     return content
+
+
+def sub_all_mentions(content: str) -> str:
+    content_sub_mentions = mention_regex.sub("", content)
+    content_sub_mentions = spaces_regex.sub("", content_sub_mentions)
+    return content_sub_mentions
 
 
 async def on_cape_message(message: discord.Message):
@@ -174,9 +202,72 @@ async def on_cape_message(message: discord.Message):
         return
     if is_emoji(message):
         return
-    content = sub_all_emojis(message)
+    content = sub_all_emojis(message.content)
+    content = sub_all_mentions(content)
     if content not in ("", "cape"):
         return await message.delete()
+
+
+async def random_cape_message(message: discord.Message):
+    if not is_past_cooldown(message.guild.id):  # type: ignore
+        return
+    copypasta = re.sub(r"%USERNAME%",
+                        message.author.display_name,
+                        random.choice(COPYPASTAS))
+    return await message.channel.send(copypasta)
+
+
+async def translate_message(message: discord.Message):
+    content: t.List[str] = message.content.split(" ", 1)
+    if len(content) == 1 and content[0] == "$translate":
+        return await help_text(message.channel)
+    text = content[1]
+    fuckery = DEFAULT_FUCKERY
+    if text.startswith(COMMAND_PREFIX):
+        command = text[1:]
+        if command == "help":
+            return await help_text(message.channel)
+        if command.startswith("fuckery"):
+            subcommand = command.split(" ", 2)
+            if len(subcommand) <= 2:
+                print("No subcommand provided")
+                return await invalid_fuckery(message.channel)
+            try:
+                fuckery = int(subcommand[1])
+                if not 0 <= fuckery <= MAX_FUCKERY:
+                    raise ValueError("Fuckery not in valid range")
+            except ValueError:
+                return await invalid_fuckery(message.channel)
+            text = subcommand[2]
+        else:
+            return await help_text(message.channel, messed_up=True)
+    if len(text) > MAX_CHARS:
+        return await text_too_long(message.channel, len(text))
+    if read_translation_chars() + len(text) * (fuckery + 1) >= TRANSLATION_QUOTA:
+        return await rate_limit(message.channel)
+    if not is_past_cooldown(message.guild.id):  # type: ignore
+        return
+    input_language = "en"
+    output_language = "en"
+    for i in range(1, fuckery + 1):
+        if i % 6 == 0 and i <= fuckery:
+            print(f"Translating from {output_language} to en")
+            text = await translate_text(
+                message.channel, text, output_language, "en"
+            )
+            input_language = "en"
+        while True:
+            output_language = LANGUAGES[random.randint(0, len(LANGUAGES) - 1)]
+            if output_language != input_language:
+                break
+        print(f"Translating from {input_language} to {output_language}")
+        text = await translate_text(
+            message.channel, text, input_language, output_language
+        )
+        input_language = output_language
+    print(f"Translating from {input_language} to en")
+    text = await translate_text(message.channel, text, input_language, "en")
+    return await message.channel.send(text)
 
 
 @discord_client.event
@@ -194,61 +285,9 @@ async def on_message(message: discord.Message):
     if message.channel.name == "cape":  # type: ignore
         return await on_cape_message(message)
     if message.content.startswith(BOT_PREFIX):
-        content: t.List[str] = message.content.split(" ", 1)
-        if len(content) == 1 and content[0] == "$translate":
-            await help_text(message.channel)
-            return
-        text = content[1]
-        fuckery = DEFAULT_FUCKERY
-        if text.startswith(COMMAND_PREFIX):
-            command = text[1:]
-            if command == "help":
-                await help_text(message.channel)
-                return
-            if command.startswith("fuckery"):
-                subcommand = command.split(" ", 2)
-                if len(subcommand) <= 2:
-                    print("No subcommand provided")
-                    await invalid_fuckery(message.channel)
-                    return
-                try:
-                    fuckery = int(subcommand[1])
-                    if not 0 <= fuckery <= MAX_FUCKERY:
-                        raise ValueError("Fuckery not in valid range")
-                except ValueError:
-                    await invalid_fuckery(message.channel)
-                    return
-                text = subcommand[2]
-            else:
-                await help_text(message.channel, messed_up=True)
-                return
-        if len(text) > MAX_CHARS:
-            await text_too_long(message.channel, len(text))
-            return
-        if read_translation_chars() + len(text) * (fuckery + 1) >= TRANSLATION_QUOTA:
-            await rate_limit(message.channel)
-            return
-        input_language = "en"
-        output_language = "en"
-        for i in range(1, fuckery + 1):
-            if i % 6 == 0 and i <= fuckery:
-                print(f"Translating from {output_language} to en")
-                text = await translate_text(
-                    message.channel, text, output_language, "en"
-                )
-                input_language = "en"
-            while True:
-                output_language = LANGUAGES[random.randint(0, len(LANGUAGES) - 1)]
-                if output_language != input_language:
-                    break
-            print(f"Translating from {input_language} to {output_language}")
-            text = await translate_text(
-                message.channel, text, input_language, output_language
-            )
-            input_language = output_language
-        print(f"Translating from {input_language} to en")
-        text = await translate_text(message.channel, text, input_language, "en")
-        await message.channel.send(text)
+        return await translate_message(message)
+    elif cape_regex.search(message.content):
+        return await random_cape_message(message)
 
 
 async def help_text(channel, messed_up: bool = False) -> None:
