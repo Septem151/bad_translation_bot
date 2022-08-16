@@ -11,3 +11,4 @@ services:
       - ./chars_log.txt:/usr/src/app/chars_log.txt
       - ./bad_translation_bot:/usr/src/app/bad_translation_bot
       - ./copypastas.json:/usr/src/app/copypastas.json
+      - ./memes:/usr/src/app/memes

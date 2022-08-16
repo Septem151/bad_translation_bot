@@ -4,6 +4,7 @@ import os
 import random
 import re
 import typing as t
+from pathlib import Path
 
 import discord
 import emoji
@@ -19,7 +20,7 @@ BOT_PREFIX = "$translate"
 COMMAND_PREFIX = "-"
 TRANSLATION_QUOTA = 480000
 LOG_FILE = "chars_log.txt"
-COOLDOWN = 10
+COOLDOWN = 5
 LANGUAGES = [
     "af",
     "am",
@@ -128,8 +129,6 @@ LANGUAGES = [
     "yo",
     "zu",
 ]
-with open("copypastas.json", "r", encoding="UTF-8") as copypastas_file:
-    COPYPASTAS: list[str] = json.load(copypastas_file)["copypastas"]
 
 load_dotenv()
 discord_token = os.environ.get("DISCORD_TOKEN")
@@ -145,7 +144,16 @@ mention_regex = re.compile(r"(<@&?\d+>|@everyone|@here)")
 cape_regex = re.compile(r"\bcape\b", flags=re.IGNORECASE)
 
 LAST_TIMESTAMPS: dict[int, datetime.datetime] = {}
+MEMES_AND_COPYPASTAS: dict[str, list[Path] | list[str]] = {}
 
+def load_copypastas():
+    with open("copypastas.json", "r", encoding="UTF-8") as copypastas_file:
+        copypastas = json.load(copypastas_file)["copypastas"]
+    meme_images = sorted(Path("memes").glob("*"))
+    MEMES_AND_COPYPASTAS["memes"] = meme_images
+    MEMES_AND_COPYPASTAS["copypastas"] = copypastas
+
+load_copypastas()
 
 @discord_client.event
 async def on_ready():
@@ -211,10 +219,17 @@ async def on_cape_message(message: discord.Message):
 async def random_cape_message(message: discord.Message):
     if not is_past_cooldown(message.guild.id):  # type: ignore
         return
-    copypasta = re.sub(r"%USERNAME%",
-                        message.author.display_name,
-                        random.choice(COPYPASTAS))
-    return await message.channel.send(copypasta)
+    message_choices: list[str | Path] = [*MEMES_AND_COPYPASTAS["memes"], *MEMES_AND_COPYPASTAS["copypastas"]]
+    message_choice = random.choice(message_choices)
+    if isinstance(message_choice, str):
+        copypasta = re.sub(r"%USERNAME%",
+                            message.author.mention,
+                            message_choice)
+        return await message.channel.send(copypasta)
+    discord_file = discord.File(message_choice)
+    embed = discord.Embed(title="cape", type="image")
+    embed.set_image(url=f"attachment://{discord_file.filename}")
+    return await message.channel.send(embed=embed, file=discord_file)
 
 
 async def translate_message(message: discord.Message):
@@ -285,8 +300,11 @@ async def on_message(message: discord.Message):
     if message.channel.name == "cape":  # type: ignore
         return await on_cape_message(message)
     if message.content.startswith(BOT_PREFIX):
+        if message.content == f"{BOT_PREFIX} -reload":
+            load_copypastas()
+            return await message.channel.send("Reloaded!")
         return await translate_message(message)
-    elif cape_regex.search(message.content):
+    if cape_regex.search(message.content):
         return await random_cape_message(message)
 
 
