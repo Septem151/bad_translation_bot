@@ -146,6 +146,7 @@ cape_regex = re.compile(r"\bcape\b", flags=re.IGNORECASE)
 LAST_TIMESTAMPS: dict[int, datetime.datetime] = {}
 MEMES_AND_COPYPASTAS: dict[str, list[Path] | list[str]] = {}
 
+
 def load_copypastas():
     with open("copypastas.json", "r", encoding="UTF-8") as copypastas_file:
         copypastas = json.load(copypastas_file)["copypastas"]
@@ -153,7 +154,9 @@ def load_copypastas():
     MEMES_AND_COPYPASTAS["memes"] = meme_images
     MEMES_AND_COPYPASTAS["copypastas"] = copypastas
 
+
 load_copypastas()
+
 
 @discord_client.event
 async def on_ready():
@@ -161,7 +164,9 @@ async def on_ready():
 
 
 def is_past_cooldown(guild_id: int) -> bool:
-    last_timestamp = LAST_TIMESTAMPS.get(guild_id, datetime.datetime.utcfromtimestamp(0))
+    last_timestamp = LAST_TIMESTAMPS.get(
+        guild_id, datetime.datetime.utcfromtimestamp(0)
+    )
     cur_time = datetime.datetime.utcnow()
     time_diff = (datetime.datetime.utcnow() - last_timestamp).total_seconds()
     if time_diff < COOLDOWN:
@@ -189,7 +194,9 @@ def is_emoji(message: discord.Message) -> bool:
 
 def sub_all_emojis(content: str) -> str:
     content_sub_custom_emojis = emoji_regex.sub("", content)
-    content_sub_all_emojis = [char for char in content_sub_custom_emojis if not emoji.is_emoji(char)]
+    content_sub_all_emojis = [
+        char for char in content_sub_custom_emojis if not emoji.is_emoji(char)
+    ]
     content = "".join(content_sub_all_emojis)
     content = spaces_regex.sub("", content)
     return content
@@ -202,7 +209,7 @@ def sub_all_mentions(content: str) -> str:
 
 
 async def on_cape_message(message: discord.Message):
-    if "cape" not in [role.name for role in message.author.roles]:  #type:ignore
+    if "cape" not in [role.name for role in message.author.roles]:  # type:ignore
         return await message.delete()
     if is_sticker(message) or is_url(message):
         return
@@ -219,12 +226,13 @@ async def on_cape_message(message: discord.Message):
 async def random_cape_message(message: discord.Message):
     if not is_past_cooldown(message.guild.id):  # type: ignore
         return
-    message_choices: list[str | Path] = [*MEMES_AND_COPYPASTAS["memes"], *MEMES_AND_COPYPASTAS["copypastas"]]
+    message_choices: list[str | Path] = [
+        *MEMES_AND_COPYPASTAS["memes"],
+        *MEMES_AND_COPYPASTAS["copypastas"],
+    ]
     message_choice = random.choice(message_choices)
     if isinstance(message_choice, str):
-        copypasta = re.sub(r"%USERNAME%",
-                            message.author.mention,
-                            message_choice)
+        copypasta = re.sub(r"%USERNAME%", message.author.mention, message_choice)
         return await message.channel.send(copypasta)
     discord_file = discord.File(message_choice)
     embed = discord.Embed(title="cape", type="image")
@@ -267,9 +275,7 @@ async def translate_message(message: discord.Message):
     for i in range(1, fuckery + 1):
         if i % 6 == 0 and i <= fuckery:
             print(f"Translating from {output_language} to en")
-            text = await translate_text(
-                message.channel, text, output_language, "en"
-            )
+            text = await translate_text(message.channel, text, output_language, "en")
             input_language = "en"
         while True:
             output_language = LANGUAGES[random.randint(0, len(LANGUAGES) - 1)]
