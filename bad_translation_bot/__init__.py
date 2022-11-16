@@ -142,9 +142,12 @@ emoji_regex = re.compile(r"<a?:\w*:\d*>")
 spaces_regex = re.compile(r"\s+")
 mention_regex = re.compile(r"(<@&?\d+>|@everyone|@here)")
 cape_regex = re.compile(r"\bcape\b", flags=re.IGNORECASE)
+solve_south_context = re.compile(r"\b(solve|south)\b", flags=re.IGNORECASE)
+shitter_context = re.compile(r"\bshitter[s]?\b", re.IGNORECASE)
+cheese_context = re.compile(r"\bcheese\b")
 
 LAST_TIMESTAMPS: dict[int, datetime.datetime] = {}
-MEMES_AND_COPYPASTAS: dict[str, list[Path] | list[str]] = {}
+MEMES_AND_COPYPASTAS: dict = {}
 
 
 def load_copypastas():
@@ -226,15 +229,36 @@ async def on_cape_message(message: discord.Message):
 async def random_cape_message(message: discord.Message):
     if not is_past_cooldown(message.guild.id):  # type: ignore
         return
-    message_choices: list[str | Path] = [
-        *MEMES_AND_COPYPASTAS["memes"],
-        *MEMES_AND_COPYPASTAS["copypastas"],
-    ]
+    # message_choices: list[str | Path] = [
+    #     *MEMES_AND_COPYPASTAS["memes"],
+    #     *MEMES_AND_COPYPASTAS["copypastas"],
+    # ]
+    contexts: list = []
+    if str(message.author) == "sc#6792":
+        contexts.append("kiseki")
+    if solve_south_context.search(message.content):
+        contexts.append("solvesouth")
+    if cheese_context.search(message.content):
+        contexts.append("cheese")
+    if shitter_context.search(message.content):
+        contexts.append("shitter")
+    cape_role = discord.utils.get(message.guild.roles, name="cape")  # type: ignore
+    if cape_role and len(contexts) == 0:
+        cape_role_id = cape_role.id
+        if message.author.get_role(cape_role_id) is not None:  # type: ignore
+            contexts.append("cape")
+        else:
+            contexts.append("nocape")
+    message_choices: list[str] = []
+    for copypasta in MEMES_AND_COPYPASTAS["copypastas"]:
+        if any(dup in copypasta["contexts"] for dup in contexts):
+            message_choices.append(copypasta["text"])
     message_choice = random.choice(message_choices)
-    if isinstance(message_choice, str):
+    if not message_choice.startswith("IMAGE:"):
         copypasta = re.sub(r"%USERNAME%", message.author.mention, message_choice)
         return await message.channel.send(copypasta)
-    discord_file = discord.File(message_choice)
+    image_path = Path("memes") / message_choice.split("IMAGE:")[1]
+    discord_file = discord.File(image_path)
     embed = discord.Embed(title="cape", type="image")
     embed.set_image(url=f"attachment://{discord_file.filename}")
     return await message.channel.send(embed=embed, file=discord_file)
