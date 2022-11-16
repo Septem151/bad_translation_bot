@@ -249,6 +249,8 @@ async def random_cape_message(message: discord.Message):
             contexts.append("cape")
         else:
             contexts.append("nocape")
+    if "kiseki" in contexts:
+        contexts = ["kiseki"]
     message_choices: list[str] = []
     for copypasta in MEMES_AND_COPYPASTAS["copypastas"]:
         if any(dup in copypasta["contexts"] for dup in contexts):
