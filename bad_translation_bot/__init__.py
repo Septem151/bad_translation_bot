@@ -224,6 +224,12 @@ CMU_DICT = {
         "ZH",
         "SH",
     ],
+    "COORDINATOR": [
+        "CORDNATER",
+        "CORDNATOR",
+        "CORDINATER",
+        "CORDUNATER",
+    ],
     "ZULRAH": [
         "ZULRA",
         "ZOLRAH",
