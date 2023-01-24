@@ -641,9 +641,29 @@ async def vorkathify(message: discord.Message):
     if len(content) == 1 and content[0] == "$vorkath":
         return await help_text(message.channel)
     text = content[1]
+    fuckery = DEFAULT_FUCKERY
+    if text.startswith(COMMAND_PREFIX):
+        command = text[1:]
+        if command == "help":
+            return await help_text(message.channel)
+        if command.startswith("fuckery"):
+            subcommand = command.split(" ", 2)
+            if len(subcommand) <= 2:
+                print("No subcommand provided")
+                return await invalid_fuckery(message.channel)
+            try:
+                fuckery = int(subcommand[1])
+                if not 0 <= fuckery <= MAX_FUCKERY:
+                    raise ValueError("Fuckery not in valid range")
+            except ValueError:
+                return await invalid_fuckery(message.channel)
+            text = subcommand[2]
+        else:
+            return await help_text(message.channel, messed_up=True)
     sentence = []
+    vork_limit = min(1, max(0, (5*fuckery - 60)/100))
     for word in text.split():
-        if random.random() < 0.25:
+        if random.random() < vork_limit:
             pronunciations: list[str] = pronouncing.phones_for_word(word)
             if len(pronunciations) != 0:
                 pronunciation = "".join(
@@ -695,27 +715,36 @@ async def help_text(channel, messed_up: bool = False) -> None:
     if messed_up:
         text += (
             "Uwu you made a fucky wucky!! A wittle fucko boingo!"
-            " Dat's not how I work!\n"
+            " Dat's not how I work!\n\n"
         )
     text += f'Type "{BOT_PREFIX} [TEXT]" to badly translate text.\n'
     text += "To set the amount of translation fuckery, type "
     text += f'"{BOT_PREFIX} {COMMAND_PREFIX}fuckery # [TEXT]", '
     text += f"where # is the amount of fuckery you desire (Max value: {MAX_FUCKERY}). "
     text += f"The default amount of fuckery is {DEFAULT_FUCKERY}.\n\n"
-    text += f'Type "$vorkath [TEXT]" to make your text look like Vorkath Wall said it.'
+    text += 'Type "$vorkath [TEXT]" to make your text look like Vorkath Wall said it.\n'
+    text += "To set the amount of vorkathery, type "
+    text += f'"$vorkath {COMMAND_PREFIX}fuckery # [TEXT]", '
+    text += f"where # is the amount of fuckery you desire (Max value: {MAX_FUCKERY}). "
+    text += f"The default amount of fuckery is {DEFAULT_FUCKERY}.\n\n"
     await channel.send(text)
 
 
 async def invalid_fuckery(channel) -> None:
     text = (
         "Uwu you made a fucky wucky!! A wittle fucko boingo!"
-        " Fuckery isn't used like dat :-(\n"
+        " Fuckery isn't used like dat :-(\n\n"
     )
-    text += (
-        f'Type "{BOT_PREFIX} {COMMAND_PREFIX}fuckery # [TEXT]", where # is the amount '
-    )
-    text += f"of fuckery you desire (Max value: {MAX_FUCKERY}). "
-    text += f"The default amount of fuckery is {DEFAULT_FUCKERY}"
+    text += f'Type "{BOT_PREFIX} [TEXT]" to badly translate text.\n'
+    text += "To set the amount of translation fuckery, type "
+    text += f'"{BOT_PREFIX} {COMMAND_PREFIX}fuckery # [TEXT]", '
+    text += f"where # is the amount of fuckery you desire (Max value: {MAX_FUCKERY}). "
+    text += f"The default amount of fuckery is {DEFAULT_FUCKERY}.\n\n"
+    text += 'Type "$vorkath [TEXT]" to make your text look like Vorkath Wall said it.\n'
+    text += "To set the amount of vorkathery, type "
+    text += f'"$vorkath {COMMAND_PREFIX}fuckery # [TEXT]", '
+    text += f"where # is the amount of fuckery you desire (Max value: {MAX_FUCKERY}). "
+    text += f"The default amount of fuckery is {DEFAULT_FUCKERY}.\n\n"
     await channel.send(text)
 
 
