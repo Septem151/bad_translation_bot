@@ -661,7 +661,7 @@ async def vorkathify(message: discord.Message):
         else:
             return await help_text(message.channel, messed_up=True)
     sentence = []
-    vork_limit = min(1, max(0, (5*fuckery - 60)/100))
+    vork_limit = min(1, max(0, (4.6875*fuckery - 50)/100))
     for word in text.split():
         if random.random() < vork_limit:
             pronunciations: list[str] = pronouncing.phones_for_word(word)
