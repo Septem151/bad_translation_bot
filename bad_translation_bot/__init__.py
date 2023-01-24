@@ -230,6 +230,14 @@ CMU_DICT = {
         "CORDINATER",
         "CORDUNATER",
     ],
+    "COORDINATION": [
+        "QUARDINATION",
+        "CORDNATION",
+        "CORDINATION",
+        "CORDNASHON",
+        "CORDNASHUN",
+        "QUARDNASHON",
+    ],
     "ZULRAH": [
         "ZULRA",
         "ZOLRAH",
