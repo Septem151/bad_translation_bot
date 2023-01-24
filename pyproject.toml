@@ -12,9 +12,10 @@ requests = "^2.26.0"
 validators = "^0.20.0"
 py-cord = "^2.0.0"
 emoji = "^2.0.0"
+pronouncing = "^0.2.0"
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.2"
+pytest = "^7.2.1"
 isort = "^5.9.3"
 black = "^21.7b0"
 mypy = "^0.910"

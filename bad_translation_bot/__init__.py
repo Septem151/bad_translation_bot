@@ -8,6 +8,7 @@ from pathlib import Path
 
 import discord
 import emoji
+import pronouncing
 import validators
 from dotenv import load_dotenv
 from google.cloud import translate_v2 as translate
@@ -129,6 +130,324 @@ LANGUAGES = [
     "yo",
     "zu",
 ]
+CMU_DICT = {
+    "AA": [
+        "O",
+        "AH",
+    ],
+    "AE": [
+        "A",
+    ],
+    "AH": [
+        "U",
+        "O",
+        "UH",
+    ],
+    "AO": [
+        "O",
+        "OH",
+        "AU",
+        "OU",
+        "AUGH",
+        "OUGH",
+        "AH",
+    ],
+    "AW": [
+        "OW",
+        "AW",
+        "OWL",
+    ],
+    "AY": [
+        "I",
+        "EYE",
+        "AI",
+    ],
+    "DH": [
+        "TH",
+        "D",
+    ],
+    "EH": [
+        "E",
+        "EH",
+    ],
+    "ER": [
+        "UR",
+        "ER",
+        "IR",
+    ],
+    "EY": [
+        "A",
+        "AY",
+        "AI",
+        "EY",
+    ],
+    "IY": [
+        "EA",
+        "EE",
+        "IE",
+    ],
+    "JH": [
+        "G",
+        "J",
+    ],
+    "N": [
+        "N",
+        "KN",
+    ],
+    "OW": [
+        "OA",
+        "OW",
+        "OH",
+        "O",
+    ],
+    "OY": [
+        "OY",
+        "OI",
+        "OWEE",
+    ],
+    "UH": [
+        "OO",
+        "U",
+    ],
+    "UW": [
+        "OO",
+        "WO",
+        "UW",
+        "U",
+    ],
+    "V": [
+        "V",
+        "VE",
+    ],
+    "ZH": [
+        "Z",
+        "ZH",
+        "SH",
+    ],
+    "ZULRAH": [
+        "ZULRA",
+        "ZOLRAH",
+        "ZOLRA",
+    ],
+    "VORKATH": [
+        "VORKETH",
+        "VORCATH",
+        "VERKATH",
+    ],
+    "CHINCHOMPA": [
+        "CHINCHAMPA",
+        "CHINCHIMPA",
+        "CHINPOMPA",
+        "CHENCHUMPA",
+    ],
+    "SLEEPWALKER": [
+        "SLEEPWOCKER",
+        "SLEEP WOCKER",
+        "SLEPEWALKER",
+        "SLEPEWAKER",
+        "SLEEPWAKER",
+    ],
+    "REVENANT": [
+        "REVANANT",
+        "REVENAT",
+        "REVANAT",
+        "REVONANT",
+        "REVONENT",
+    ],
+    "KHARID": [
+        "KARID",
+        "CARID",
+        "KHARDID",
+    ],
+    "MOURNER": [
+        "MORNER",
+        "MOANER",
+    ],
+    "MINOTAUR": [
+        "MINTONAUR",
+        "MINOTAR",
+        "MINATAR",
+        "MINATAUR",
+        "MINATOR",
+    ],
+    "ICEFIEND": [
+        "ICE FEEND",
+        "ICE FRIEND",
+        "ICEFRIEND",
+        "ICEFEEND",
+        "ISEFIEND",
+    ],
+    "BARBARIAN": [
+        "BAR BARIAN",
+        "BARBERIAN",
+        "BARBAREAN",
+    ],
+    "FOX": [
+        "FOCKS",
+        "FAHKS",
+    ],
+    "PENANCE": [
+        "PININS",
+        "PINENS",
+        "PININCE",
+        "PINENCE",
+        "PENANTS",
+        "PINANTS",
+    ],
+    "ZAMORAK": [
+        "ZAMOROK",
+        "ZIMORAK",
+        "ZAMURAK",
+        "ZAMORACK",
+        "ZAMARACK",
+    ],
+    "SHAMAN": [
+        "SHOMON",
+        "SHOMAN",
+        "SHOWMAN",
+    ],
+    "MENAPHITE": [
+        "MEN A FIGHT",
+        "MENAFITE",
+        "MENAFIGHT",
+        "MENAPHYTE",
+    ],
+    "BASILISK": [
+        "BASKILISK",
+        "BASS ALICK",
+        "BASKALIST",
+    ],
+    "AVIANSIE": [
+        "IVY ANSIE",
+        "AVYANSY",
+        "AVIANSY",
+        "AVYANSIE",
+    ],
+    "SARADOMIN": [
+        "SARAHDOMIN",
+        "SARA DOME IN",
+        "SARADOMEN",
+        "SARODOMIN",
+    ],
+    "WEREWOLF": [
+        "WHERE WOOF",
+        "WEAR WOOF",
+        "WHEREWOLF",
+        "WHEREWOOF",
+        "WEARWOOF",
+        "WEARWOLF",
+    ],
+    "AKKHA": [
+        "AKKA",
+        "OKKA",
+        "OKKAH",
+        "AKHA",
+    ],
+    "HELLHOUND": [
+        "HELL HOWND",
+        "HELLHOWND",
+    ],
+    "KRAKEN": [
+        "KRAKIN",
+        "CRACKIN",
+        "CRACKEN",
+    ],
+    "MANIACAL": [
+        "MANY IKLE",
+        "MANIAKL",
+        "MANIACLE",
+    ],
+    "NECHRYAEL": [
+        "NECK REAL",
+        "NECKREAL",
+        "NECKRIAL",
+        "NECHRIAL",
+    ],
+    "ELVARG": [
+        "ELFARG",
+        "ELVARG",
+        "ELVE ARG",
+    ],
+    "MUSPAH": [
+        "MUSTARD",
+        "MUSPA",
+        "MOOSPAH",
+        "MOOSPA",
+        "MUSSPA",
+    ],
+    "REX": [
+        "RECKS",
+        "WRECKS",
+        "WREX",
+        "RAX",
+        "WRAX",
+    ],
+    "PRIME": [
+        "PRYME",
+        "PRYM",
+    ],
+    "SUPREME": [
+        "SURPREME",
+        "SIRPREME",
+        "SOPREME",
+        "SUHPREEM",
+    ],
+    "SOTETSEG": [
+        "SAUSAGE",
+        "SOTSEGEG",
+        "SOTSEG",
+        "SOATESEG",
+    ],
+    "ZALCANO": [
+        "ZOLCANO",
+        "ZALKAYNO",
+        "ZALCONO",
+    ],
+    "KEPHRI": [
+        "KEFREE",
+        "KEPHREE",
+        "KEFRI",
+    ],
+    "ZEBAK": [
+        "ZEEBACK",
+        "ZEBACK",
+        "SEBAK",
+        "ZEBOK",
+    ],
+    "HYDRA": [
+        "HIGH DRAW",
+        "HYDRA",
+    ],
+    "VENENATIS": [
+        "VENATIS",
+        "VININATIS",
+        "VINENATIS",
+        "VINERATIS",
+        "VENONATIS",
+        "VENOMNATIS",
+    ],
+    "WARDEN": [
+        "WORD IN",
+        "WORDIN",
+        "WARDIN",
+    ],
+    "SEREN": [
+        "SIRIN",
+        "SERIN",
+        "CERIN",
+    ],
+    "OLM": [
+        "OME",
+        "OHM",
+        "OLM",
+    ],
+    "BANDOS": [
+        "BAND TOES",
+        "BANTOES",
+        "BENDOS",
+        "BANDOHZ",
+    ],
+}
 
 load_dotenv()
 discord_token = os.environ.get("DISCORD_TOKEN")
@@ -268,7 +587,7 @@ async def random_cape_message(message: discord.Message):
 
 async def translate_message(message: discord.Message):
     content: t.List[str] = message.content.split(" ", 1)
-    if len(content) == 1 and content[0] == "$translate":
+    if len(content) == 1 and content[0] == BOT_PREFIX:
         return await help_text(message.channel)
     text = content[1]
     fuckery = DEFAULT_FUCKERY
@@ -317,6 +636,35 @@ async def translate_message(message: discord.Message):
     return await message.channel.send(text)
 
 
+async def vorkathify(message: discord.Message):
+    content: t.List[str] = message.content.split(" ", 1)
+    if len(content) == 1 and content[0] == "$vorkath":
+        return await help_text(message.channel)
+    text = content[1]
+    sentence = []
+    for word in text.split():
+        if random.random() < 0.25:
+            pronunciations: list[str] = pronouncing.phones_for_word(word)
+            if len(pronunciations) != 0:
+                pronunciation = "".join(
+                    letter for letter in pronunciations[0] if not letter.isdigit()
+                )
+            else:
+                pronunciation = word
+            conc_word = ""
+            for pronunc in pronunciation.split():
+                sub_choices = CMU_DICT.get(pronunc)
+                if not sub_choices:
+                    subs = pronunc
+                else:
+                    subs = random.choice(sub_choices)
+                conc_word += subs
+            sentence.append(conc_word.lower())
+        else:
+            sentence.append(word.lower())
+    return await message.channel.send(" ".join(sentence))
+
+
 @discord_client.event
 async def on_message_edit(before: discord.Message, after: discord.Message):
     if before.author == discord_client.user:
@@ -336,6 +684,8 @@ async def on_message(message: discord.Message):
             load_copypastas()
             return await message.channel.send("Reloaded!")
         return await translate_message(message)
+    if message.content.startswith("$vorkath"):
+        return await vorkathify(message)
     if cape_regex.search(message.content):
         return await random_cape_message(message)
 
@@ -351,7 +701,8 @@ async def help_text(channel, messed_up: bool = False) -> None:
     text += "To set the amount of translation fuckery, type "
     text += f'"{BOT_PREFIX} {COMMAND_PREFIX}fuckery # [TEXT]", '
     text += f"where # is the amount of fuckery you desire (Max value: {MAX_FUCKERY}). "
-    text += f"The default amount of fuckery is {DEFAULT_FUCKERY}."
+    text += f"The default amount of fuckery is {DEFAULT_FUCKERY}.\n\n"
+    text += f'Type "$vorkath [TEXT]" to make your text look like Vorkath Wall said it.'
     await channel.send(text)
 
 
