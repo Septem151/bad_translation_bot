@@ -474,8 +474,8 @@ spaces_regex = re.compile(r"\s+")
 mention_regex = re.compile(r"(<@&?\d+>|@everyone|@here)")
 cape_regex = re.compile(r"\bcape\b", flags=re.IGNORECASE)
 solve_south_context = re.compile(r"\b(solve|south)\b", flags=re.IGNORECASE)
-shitter_context = re.compile(r"\bshitter[s]?\b", re.IGNORECASE)
-cheese_context = re.compile(r"\bcheese\b")
+shitter_context = re.compile(r"\bshitter[s]?\b", flags=re.IGNORECASE)
+cheese_context = re.compile(r"\bcheese\b", flags=re.IGNORECASE)
 
 LAST_TIMESTAMPS: dict[int, datetime.datetime] = {}
 MEMES_AND_COPYPASTAS: dict = {}
