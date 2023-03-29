@@ -21,7 +21,7 @@ BOT_PREFIX = "$translate"
 COMMAND_PREFIX = "-"
 TRANSLATION_QUOTA = 480000
 LOG_FILE = "chars_log.txt"
-COOLDOWN = 5
+COOLDOWN = 3600.0
 LANGUAGES = [
     "af",
     "am",
@@ -477,7 +477,7 @@ solve_south_context = re.compile(r"\b(solve|south)\b", flags=re.IGNORECASE)
 shitter_context = re.compile(r"\bshitter[s]?\b", flags=re.IGNORECASE)
 cheese_context = re.compile(r"\bcheese\b", flags=re.IGNORECASE)
 
-LAST_TIMESTAMPS: dict[int, datetime.datetime] = {}
+LAST_TIMESTAMPS: dict[int, tuple[int, datetime.datetime]] = {}
 MEMES_AND_COPYPASTAS: dict = {}
 
 
@@ -498,14 +498,18 @@ async def on_ready():
 
 
 def is_past_cooldown(guild_id: int) -> bool:
-    last_timestamp = LAST_TIMESTAMPS.get(
-        guild_id, datetime.datetime.utcfromtimestamp(0)
+    count, last_timestamp = LAST_TIMESTAMPS.get(
+        guild_id, (0, datetime.datetime.utcfromtimestamp(0))
     )
     cur_time = datetime.datetime.utcnow()
-    time_diff = (datetime.datetime.utcnow() - last_timestamp).total_seconds()
-    if time_diff < COOLDOWN:
+    if count < 2:
+        LAST_TIMESTAMPS[guild_id] = (count+1, cur_time)
         return False
-    LAST_TIMESTAMPS[guild_id] = cur_time
+    time_diff = (cur_time - last_timestamp).total_seconds()
+    if time_diff < COOLDOWN:
+        LAST_TIMESTAMPS[guild_id] = (count+1, cur_time)
+        return False
+    LAST_TIMESTAMPS[guild_id] = (0, cur_time)
     return True
 
 
