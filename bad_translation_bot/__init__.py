@@ -565,8 +565,6 @@ async def random_cape_message(message: discord.Message):
     #     *MEMES_AND_COPYPASTAS["copypastas"],
     # ]
     contexts: list = []
-    if str(message.author) == "sc#6792":
-        contexts.append("kiseki")
     if solve_south_context.search(message.content):
         contexts.append("solvesouth")
     if cheese_context.search(message.content):
@@ -580,8 +578,6 @@ async def random_cape_message(message: discord.Message):
             contexts.append("cape")
         else:
             contexts.append("nocape")
-    if "kiseki" in contexts:
-        contexts = ["kiseki"]
     message_choices: list[str] = []
     for copypasta in MEMES_AND_COPYPASTAS["copypastas"]:
         if any(dup in copypasta["contexts"] for dup in contexts):
