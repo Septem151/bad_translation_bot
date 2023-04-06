@@ -21,7 +21,8 @@ BOT_PREFIX = "$translate"
 COMMAND_PREFIX = "-"
 TRANSLATION_QUOTA = 480000
 LOG_FILE = "chars_log.txt"
-COOLDOWN = 3600.0
+COOLDOWN = 600.0
+TRANSLATE_COOLDOWN = 30.0
 LANGUAGES = [
     "af",
     "am",
@@ -477,7 +478,7 @@ solve_south_context = re.compile(r"\b(solve|south)\b", flags=re.IGNORECASE)
 shitter_context = re.compile(r"\bshitter[s]?\b", flags=re.IGNORECASE)
 cheese_context = re.compile(r"\bcheese\b", flags=re.IGNORECASE)
 
-LAST_TIMESTAMPS: dict[int, tuple[int, datetime.datetime]] = {}
+LAST_TIMESTAMPS: dict[int, tuple[datetime.datetime, datetime.datetime]] = {}
 MEMES_AND_COPYPASTAS: dict = {}
 
 
@@ -497,20 +498,26 @@ async def on_ready():
     print(f"Logged in as {discord_client.user}")
 
 
-def is_past_cooldown(guild_id: int) -> bool:
-    count, last_timestamp = LAST_TIMESTAMPS.get(
-        guild_id, (0, datetime.datetime.utcfromtimestamp(0))
+def is_past_cooldown(guild_id: int, cape: bool = True) -> bool:
+    last_timestamp, last_trans_timestamp = LAST_TIMESTAMPS.get(
+        guild_id, (
+            datetime.datetime.utcfromtimestamp(0),
+            datetime.datetime.utcfromtimestamp(0)
+        )
     )
     cur_time = datetime.datetime.utcnow()
-    if count < 2:
-        LAST_TIMESTAMPS[guild_id] = (count+1, cur_time)
-        return False
-    time_diff = (cur_time - last_timestamp).total_seconds()
-    if time_diff < COOLDOWN:
-        LAST_TIMESTAMPS[guild_id] = (count+1, cur_time)
-        return False
-    LAST_TIMESTAMPS[guild_id] = (0, cur_time)
-    return True
+    if cape:
+        time_diff = (cur_time - last_timestamp).total_seconds()
+    else:
+        time_diff = (cur_time - last_trans_timestamp).total_seconds()
+    cooldown = COOLDOWN if cape else TRANSLATE_COOLDOWN
+    if time_diff > cooldown:
+        if cape:
+            LAST_TIMESTAMPS[guild_id] = (cur_time, last_trans_timestamp)
+        else:
+            LAST_TIMESTAMPS[guild_id] = (last_timestamp, cur_time)
+        return True
+    return False
 
 
 def is_sticker(message: discord.Message) -> bool:
@@ -625,7 +632,7 @@ async def translate_message(message: discord.Message):
         return await text_too_long(message.channel, len(text))
     if read_translation_chars() + len(text) * (fuckery + 1) >= TRANSLATION_QUOTA:
         return await rate_limit(message.channel)
-    if not is_past_cooldown(message.guild.id):  # type: ignore
+    if not is_past_cooldown(message.guild.id, cape=False):  # type: ignore
         return
     input_language = "en"
     output_language = "en"
