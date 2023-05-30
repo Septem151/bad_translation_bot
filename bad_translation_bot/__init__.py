@@ -11,7 +11,9 @@ import emoji
 import pronouncing
 import validators
 from dotenv import load_dotenv
-from google.cloud import translate_v2 as translate
+from google.cloud.translate_v2 import Client
+
+from bad_translation_bot.translator import Translator
 
 __version__ = "0.1.0"
 DEFAULT_FUCKERY = 16
@@ -468,7 +470,7 @@ intents = discord.Intents.default()
 intents.messages = True  # pylint: disable=assigning-non-slot
 intents.message_content = True  # pylint: disable=assigning-non-slot
 discord_client = discord.Client(intents=intents)
-translate_client = translate.Client()
+translate_client = Client()
 
 emoji_regex = re.compile(r"<a?:\w*:\d*>")
 spaces_regex = re.compile(r"\s+")
@@ -500,10 +502,8 @@ async def on_ready():
 
 def is_past_cooldown(guild_id: int, cape: bool = True) -> bool:
     last_timestamp, last_trans_timestamp = LAST_TIMESTAMPS.get(
-        guild_id, (
-            datetime.datetime.utcfromtimestamp(0),
-            datetime.datetime.utcfromtimestamp(0)
-        )
+        guild_id,
+        (datetime.datetime.utcfromtimestamp(0), datetime.datetime.utcfromtimestamp(0)),
     )
     cur_time = datetime.datetime.utcnow()
     if cape:
@@ -634,24 +634,26 @@ async def translate_message(message: discord.Message):
         return await rate_limit(message.channel)
     if not is_past_cooldown(message.guild.id, cape=False):  # type: ignore
         return
-    input_language = "en"
-    output_language = "en"
-    for i in range(1, fuckery + 1):
-        if i % 6 == 0 and i <= fuckery:
-            print(f"Translating from {output_language} to en")
-            text = await translate_text(message.channel, text, output_language, "en")
-            input_language = "en"
-        while True:
-            output_language = LANGUAGES[random.randint(0, len(LANGUAGES) - 1)]
-            if output_language != input_language:
-                break
-        print(f"Translating from {input_language} to {output_language}")
-        text = await translate_text(
-            message.channel, text, input_language, output_language
-        )
-        input_language = output_language
-    print(f"Translating from {input_language} to en")
-    text = await translate_text(message.channel, text, input_language, "en")
+    translator = Translator(text, translate_client)
+    text = translator.translate(fuckery)
+    # input_language = "en"
+    # output_language = "en"
+    # for i in range(1, fuckery + 1):
+    #     if i % 6 == 0 and i <= fuckery:
+    #         print(f"Translating from {output_language} to en")
+    #         text = await translate_text(message.channel, text, output_language, "en")
+    #         input_language = "en"
+    #     while True:
+    #         output_language = LANGUAGES[random.randint(0, len(LANGUAGES) - 1)]
+    #         if output_language != input_language:
+    #             break
+    #     print(f"Translating from {input_language} to {output_language}")
+    #     text = await translate_text(
+    #         message.channel, text, input_language, output_language
+    #     )
+    #     input_language = output_language
+    # print(f"Translating from {input_language} to en")
+    # text = await translate_text(message.channel, text, input_language, "en")
     return await message.channel.send(text)
 
 
@@ -680,7 +682,7 @@ async def vorkathify(message: discord.Message):
         else:
             return await help_text(message.channel, messed_up=True)
     sentence = []
-    vork_limit = min(1, max(0, (4.6875*fuckery - 50)/100))
+    vork_limit = min(1, max(0, (4.6875 * fuckery - 50) / 100))
     for word in text.split():
         if random.random() < vork_limit:
             pronunciations: list[str] = pronouncing.phones_for_word(word)
