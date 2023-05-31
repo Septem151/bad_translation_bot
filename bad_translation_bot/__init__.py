@@ -654,6 +654,8 @@ async def translate_message(message: discord.Message):
     #     input_language = output_language
     # print(f"Translating from {input_language} to en")
     # text = await translate_text(message.channel, text, input_language, "en")
+    if len(text) == 0:
+        text = translator.source
     return await message.channel.send(text)
 
 
