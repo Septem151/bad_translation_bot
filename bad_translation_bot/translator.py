@@ -1,5 +1,6 @@
 import random
 import re
+import time
 
 from google.cloud.translate_v2 import Client
 
@@ -159,24 +160,31 @@ class Translator:
             self.__setrandomlang()
 
         done = False
+        failures = 0
+        max_failures = 5
         while not done:
             try:
                 translation = {}
                 if self.lang is not None:
                     if self.last_lang is not None:
+                        print("CALLING TRANSLATE")
                         translation = self.client.translate(
                             self.result,
                             target_language=self.lang["language"],
                             source_language=self.last_lang["language"],
                         )
                     else:
+                        print("CALLING TRANSLATE")
                         translation = self.client.translate(
                             self.result,
                             target_language=self.lang["language"],
                         )
             except Exception as exception:
-                print("Exception failed")
-                continue
+                print(exception)
+                failures += 1
+                if failures < max_failures:
+                    time.sleep(0.5)
+                    continue
             done = True
 
         self.result = translation["translatedText"]
