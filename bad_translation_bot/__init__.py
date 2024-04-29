@@ -554,17 +554,19 @@ def sub_all_mentions(content: str) -> str:
 
 
 async def on_cape_message(message: discord.Message):
-    if "cape" not in [role.name for role in message.author.roles]:  # type:ignore
+    user_roles: list[str] = [role.name for role in message.author.roles]
+    valid_roles: list[str] = ["cape", "quiver"]
+    if not any(role in user_roles for role in valid_roles):
         return await message.delete()
     if is_sticker(message) or is_url(message):
         return
-    if is_attachment(message) and message.content in ("", "cape"):
+    if is_attachment(message) and message.content in ("", "cape", "quiver"):
         return
     if is_emoji(message):
         return
     content = sub_all_emojis(message.content)
     content = sub_all_mentions(content)
-    if content not in ("", "cape"):
+    if content not in ("", "cape", "quiver"):
         return await message.delete()
 
 
@@ -592,6 +594,9 @@ async def random_cape_message(message: discord.Message):
     message_choices: list[str] = []
     for copypasta in MEMES_AND_COPYPASTAS["copypastas"]:
         if any(dup in copypasta["contexts"] for dup in contexts):
+            message_choices.append(copypasta["text"])
+    if len(message_choices) == 0:
+        for copypasta in MEMES_AND_COPYPASTAS["copypastas"]:
             message_choices.append(copypasta["text"])
     message_choice = random.choice(message_choices)
     if not message_choice.startswith("IMAGE:"):
